@@ -9,12 +9,10 @@ local Core = require("_CatLib")
 local Utils = {}
 local KillTimeTracker = nil
 
--- Initialize
 function Utils.init(context)
     KillTimeTracker = context
 end
 
--- Format time as minutes, seconds, milliseconds
 function Utils.formatTime(seconds)
     local truncatedSeconds = math.floor(seconds * 100) / 100
     local minutes = math.floor(truncatedSeconds / 60)
@@ -23,7 +21,6 @@ function Utils.formatTime(seconds)
     return string.format("%d'%02d\"%02d", minutes, secs, ms)
 end
 
--- Get quest rank text from numeric rank
 function Utils.getQuestRankText(rank)
     if rank >= 1 and rank <= 3 then
         return "LR" .. rank
@@ -34,12 +31,10 @@ function Utils.getQuestRankText(rank)
     end
 end
 
--- Get monster strength text from numeric strength
 function Utils.getMonsterStrengthText(strength)
     return "Strength" .. strength
 end
 
--- Format boss name with player count
 function Utils.formatBossNameWithPlayerCount(bossName, playerCount)
     if not playerCount or playerCount <= 1 then
         if bossName:match("by %d+ players") then
@@ -55,9 +50,7 @@ function Utils.formatBossNameWithPlayerCount(bossName, playerCount)
     return string.format("%s by %d players", bossName, playerCount)
 end
 
--- In getFormattedBossName function in utils.lua
 function Utils.getFormattedBossName(monsterName, questRank, monsterStrength, isTempered, playerCount)
-    -- Check if monsterName already has "Tempered" prefix
     local temperedPrefix = ""
     if isTempered and not monsterName:match("^Tempered") then
         temperedPrefix = "Tempered "
@@ -76,7 +69,6 @@ function Utils.getFormattedBossName(monsterName, questRank, monsterStrength, isT
     return baseName
 end
 
--- Extract details from a boss name
 function Utils.extractBossDetails(bossName)
     local isTempered = bossName:match("^Tempered") ~= nil
     
@@ -125,7 +117,6 @@ function Utils.extractBossDetails(bossName)
     }
 end
 
--- Sort boss names
 function Utils.sortBossNames(bossNames)
     local bossDetails = {}
     for i, bossName in ipairs(bossNames) do
@@ -166,11 +157,8 @@ function Utils.sortBossNames(bossNames)
     return sortedNames
 end
 
--- Send a notification to the player
 function Utils.sendNotification(message)
-    -- Safer check to handle potential nil KillTimeTracker reference
     if not KillTimeTracker or not KillTimeTracker.config or not KillTimeTracker.config.SystemNotifications then 
-        -- Fall back to always sending notifications if the config isn't loaded yet
         if Core.SendMessage then
             Core.SendMessage(message)
         else

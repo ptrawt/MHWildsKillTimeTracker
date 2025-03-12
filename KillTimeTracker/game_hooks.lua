@@ -9,18 +9,15 @@ local os = os
 local GameHooks = {}
 local KillTimeTracker = nil
 
--- Initialize with the main context
 function GameHooks.init(context)
     KillTimeTracker = context
 end
 
--- Set up all game hooks
 function GameHooks.setupHooks()
     GameHooks.setupQuestStartHandler()
     GameHooks.setupQuestEndHandler()
 end
 
--- Set up quest start handler
 function GameHooks.setupQuestStartHandler()
     Core.OnQuestStartEnter(function()
         local bossName = KillTimeTracker.records.getBossNameFromContext()
@@ -64,7 +61,6 @@ function GameHooks.setupQuestStartHandler()
     end)
 end
 
--- Set up quest end handler
 function GameHooks.setupQuestEndHandler()
     Core.OnQuestEnd(function()
         local questDirector = Core.GetQuestDirector()
@@ -73,7 +69,6 @@ function GameHooks.setupQuestEndHandler()
         local questElapsed = Core.GetQuestElapsedTime() or 0
         local isSuccess = false
         
-        -- Multiple definitive checks for quest success
         local successChecks = {
             function() return questDirector.isQuestClearShowing and questDirector:isQuestClearShowing() end,
             function() return questDirector.isQuestSuccessFreePlayTime and questDirector:isQuestSuccessFreePlayTime() end,
@@ -89,7 +84,6 @@ function GameHooks.setupQuestEndHandler()
             end
         end
         
-        -- Additional check for quest flow
         if not isSuccess and questDirector.get_CurFlow then
             local questFlow = questDirector:get_CurFlow()
             
@@ -97,12 +91,10 @@ function GameHooks.setupQuestEndHandler()
                 if questFlow and questFlow.get_type_definition then
                     local flowType = questFlow:get_type_definition():get_name()
                     
-                    -- Check for explicit success indicators in flow type
                     if flowType:find("QuestClear") or flowType:find("QuestSuccess") then
                         return true
                     end
                     
-                    -- Check quest result data if available
                     if flowType == "cQuestResult" then
                         local resultData = nil
                         if questFlow.get_QuestResultData then
@@ -128,7 +120,6 @@ function GameHooks.setupQuestEndHandler()
             end
         end
         
-        -- If no success is detected, exit
         if not isSuccess then
             if KillTimeTracker.utils and KillTimeTracker.utils.logDebug then
                 KillTimeTracker.utils.logDebug("Quest not successful. Skipping record.")
@@ -136,7 +127,6 @@ function GameHooks.setupQuestEndHandler()
             return
         end
         
-        -- Rest of the existing code for logging successful quest
         local bossName = KillTimeTracker.records.getBossNameFromContext()
         local weaponName = KillTimeTracker.records.getWeaponName()
         local timestamp = os.time()

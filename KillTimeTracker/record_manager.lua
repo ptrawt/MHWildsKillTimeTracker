@@ -42,12 +42,10 @@ local RecordManager = {
 local KillTimeTracker = nil
 local EnemyIdNameMap = Core.GetEnumMap("app.EnemyDef.ID")
 
--- Initialize with the main context
 function RecordManager.init(context)
     KillTimeTracker = context
 end
 
--- Initialize monster name map
 function RecordManager.initMonsterNameMap()
     for i = 1, #RecordManager.BossIDList do
         local fullId = RecordManager.BossIDList[i]
@@ -60,7 +58,6 @@ function RecordManager.initMonsterNameMap()
     end
 end
 
--- Get monster name from EM ID
 function RecordManager.getMonsterName(emId)
     if RecordManager.monsterNameMap[emId] then
         return RecordManager.monsterNameMap[emId]
@@ -74,7 +71,6 @@ function RecordManager.getMonsterName(emId)
     return "Unknown Monster (" .. emId .. ")"
 end
 
--- Get weapon name from player
 function RecordManager.getWeaponName()
     local weaponType = Core.GetPlayerWeaponType()
     if weaponType >= 0 then
@@ -117,7 +113,6 @@ function RecordManager.getWeaponName()
 end
 
 function RecordManager.getBossNameFromContext()
-    -- Method 1: Use quest director's target information
     local questDirector = Core.GetQuestDirector()
     if questDirector and questDirector._QuestData then
         local questData = questDirector._QuestData
@@ -146,7 +141,6 @@ function RecordManager.getBossNameFromContext()
                             end
                         end
                         
-                        -- If a specific boss name is detected, use it to find the matching target
                         if KillTimeTracker.monster_detector then
                             for ctx, monster in pairs(KillTimeTracker.monster_detector.activeMonsters) do
                                 if monster.name == monsterName then
@@ -184,7 +178,6 @@ function RecordManager.getBossNameFromContext()
         end
     end
     
-    -- Fallback to manual or default methods
     local questRank = KillTimeTracker.config.ManualQuestRank
     local monsterStrength = KillTimeTracker.config.ManualMonsterDifficulty
     local isTempered = KillTimeTracker.config.ManualTemperedStatus
@@ -197,7 +190,6 @@ function RecordManager.getBossNameFromContext()
     )
 end
 
--- Get best time for a boss
 function RecordManager.getBestTimeForBoss(bossName)
     if not KillTimeTracker.data.bestTimes[bossName] then
         return nil
@@ -236,7 +228,6 @@ function RecordManager.getBestTimeForBoss(bossName)
     }
 end
 
--- Add a new recent hunt
 function RecordManager.addRecentHunt(bossName, weaponName, killTime, timestamp)
     local huntRecord = {
         bossName = bossName,
@@ -258,7 +249,6 @@ function RecordManager.addRecentHunt(bossName, weaponName, killTime, timestamp)
     return huntRecord
 end
 
--- Update best time for a boss/weapon
 function RecordManager.updateBestTime(bossName, weaponName, killTime, timestamp, playerCount)
     timestamp = timestamp or os.time()
     playerCount = playerCount or KillTimeTracker.config.getPlayerCount()

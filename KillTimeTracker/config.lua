@@ -18,18 +18,16 @@ local Config = {
     FallbackAnotherWeapon = true,
     CurrentSet = -1,
     HuntRecordsPlayerFilter = 0,
-    AutoDetectMonsterInfo = true  -- New option for auto-detection
+    AutoDetectMonsterInfo = true
 }
 
 local KillTimeTracker = nil
 local configPath = "KillTimeTrackerConfig.json"
 
--- Initialize with the main context
 function Config.init(context)
     KillTimeTracker = context
 end
 
--- Load configuration from file
 function Config.loadConfig()
     local ok, data = pcall(json.load_file, configPath)
     if ok and data and type(data) == "table" then
@@ -71,20 +69,17 @@ function Config.loadConfig()
             Config.MaxRecentHunts = data.MaxRecentHunts
         end
         
-        -- Load new auto-detection setting
         if data.AutoDetectMonsterInfo ~= nil then
             Config.AutoDetectMonsterInfo = data.AutoDetectMonsterInfo
         end
     end
 end
 
--- Save configuration to file
 function Config.saveConfig()
     Config.IsWindowOpen = KillTimeTracker.ui.isWindowOpen
     pcall(json.dump_file, configPath, Config)
 end
 
--- Get current player count
 function Config.getPlayerCount()
     if Config.ManualPlayerCount and Config.ManualPlayerCount > 0 then
         return Config.ManualPlayerCount

@@ -28,13 +28,11 @@ local UIManager = {
 
 local KillTimeTracker = nil
 
--- Initialize with the main context
 function UIManager.init(context)
     KillTimeTracker = context
     UIManager.isWindowOpen = KillTimeTracker.config.IsWindowOpen
 end
 
--- Set up UI handlers
 function UIManager.setupUIHandlers()
     re.on_draw_ui(function()
         if imgui.button("Toggle Kill Time Tracker") then
@@ -68,7 +66,6 @@ function UIManager.setupUIHandlers()
     end)
 end
 
--- Draw the main content of the window
 function UIManager.drawMainContent()
     UIManager.drawHuntRecords()
     UIManager.drawRecentHunts()
@@ -76,7 +73,6 @@ function UIManager.drawMainContent()
     UIManager.drawAbout()
 end
 
--- Draw the hunt records section
 function UIManager.drawHuntRecords()
     if not imgui.collapsing_header("Hunt Records", 1) then return end
     
@@ -221,7 +217,6 @@ function UIManager.drawHuntRecords()
     end
 end
 
--- Draw the recent hunts section
 function UIManager.drawRecentHunts()
     if not imgui.collapsing_header("Recent Hunts", 1) then return end
     
@@ -255,7 +250,6 @@ function UIManager.drawRecentHunts()
     end
 end
 
--- Draw the settings section
 function UIManager.drawSettings()
     if not imgui.collapsing_header("Settings", 1) then return end
     
@@ -274,14 +268,6 @@ function UIManager.drawSettings()
     
     changed, KillTimeTracker.config.ManualTemperedStatus = imgui.checkbox("Tempered Monster", KillTimeTracker.config.ManualTemperedStatus)
     if changed then KillTimeTracker.config.saveConfig() end
-    
-    changed, KillTimeTracker.config.AutoDetectMonsterInfo = imgui.checkbox("Auto-detect Monster Info (Experimental)", KillTimeTracker.config.AutoDetectMonsterInfo)
-    if changed then KillTimeTracker.config.saveConfig() end
-    
-    if KillTimeTracker.config.AutoDetectMonsterInfo then
-        imgui.text("The mod will try to automatically detect monster and quest information.")
-        imgui.text("Manual settings will be used as fallback.")
-    end
     
     local previewName = KillTimeTracker.config.ManualTemperedStatus and "Tempered Monster" or "Monster"
     
@@ -335,7 +321,6 @@ function UIManager.drawSettings()
     end
 end
 
--- Draw the about section
 function UIManager.drawAbout()
     if not imgui.collapsing_header("About", 1) then return end
 
@@ -344,10 +329,9 @@ function UIManager.drawAbout()
     imgui.text("Records best times by monster, rank, strength, and weapon")
     
     imgui.spacing()
-    imgui.text("New in v1.1.0: Auto-detection of monster information and quest ranks")
+    imgui.text("New in v1.1.0: Records filtering and multiplayer logging support")
 end
 
--- Open manual entry dialog
 function UIManager.openManualEntryDialog()
     UIManager.manualEntryState.isOpen = true
     UIManager.manualEntryState.selectedBoss = ""
@@ -363,7 +347,6 @@ function UIManager.openManualEntryDialog()
     UIManager.manualEntryState.playerCount = KillTimeTracker.config.ManualPlayerCount or 1
 end
 
--- Draw manual entry dialog
 function UIManager.drawManualEntryDialog()
     if not UIManager.manualEntryState.isOpen then return end
     
@@ -515,7 +498,6 @@ function UIManager.drawManualEntryDialog()
     end
 end
 
--- Show confirm dialog for resetting hunt records
 function UIManager.showResetHuntRecordsConfirm()
     local showConfirmDialog = false
     
@@ -553,7 +535,6 @@ function UIManager.showResetHuntRecordsConfirm()
     showConfirmDialog = true
 end
 
--- Show confirm dialog for resetting recent hunts
 function UIManager.showResetRecentHuntsConfirm()
     local showConfirmDialog = false
     

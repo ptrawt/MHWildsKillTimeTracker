@@ -7,46 +7,36 @@ local Core = require("_CatLib")
 local sdk = sdk
 
 local MonsterDetector = {
-    -- Monster information
     monsterDefinitions = {},
     activeMonsters = {},
     
-    -- SDK types and methods
     Enemy_ContextHolder = nil,
     EnemyContextHolder_Context = nil,
     GetEnemyNameFunc = nil,
     GetMsgFunc = nil,
     
-    -- Quest rank detection
     questRank = 1,
     questDifficulty = 3,
     
-    -- Track the primary target
     primaryTarget = nil
 }
 
 local KillTimeTracker = nil
 
--- Initialize with the main context
 function MonsterDetector.init(context)
     KillTimeTracker = context
     
-    -- Find SDK types needed for monster detection
     MonsterDetector.Enemy_ContextHolder = sdk.find_type_definition("app.EnemyCharacter"):get_field("_Context")
     MonsterDetector.EnemyContextHolder_Context = sdk.find_type_definition("app.cEnemyContextHolder"):get_field("_Em")
     MonsterDetector.GetEnemyNameFunc = sdk.find_type_definition("app.EnemyDef"):get_method("EnemyName(app.EnemyDef.ID)")
     MonsterDetector.GetMsgFunc = sdk.find_type_definition("via.gui.message"):get_method("get(System.Guid)")
     
-    -- Initialize the enemy types list
     MonsterDetector.initEnemyTypesList()
     
-    -- Hook into enemy updates
     MonsterDetector.setupHooks()
 end
 
--- Setup hooks for monster detection
 function MonsterDetector.setupHooks()
-    -- Hook into the enemy update method
     sdk.hook(
         sdk.find_type_definition("app.EnemyCharacter"):get_method("doUpdateEnd"),
         function(args)
@@ -55,7 +45,6 @@ function MonsterDetector.setupHooks()
         function(retval) return retval end
     )
     
-    -- Hook quest scene changes
     sdk.hook(
         sdk.find_type_definition("app.EnemyManager"):get_method("evSceneLoadEnd_ThroughJunction"),
         function(args)
@@ -72,7 +61,6 @@ function MonsterDetector.setupHooks()
         function(retval) return retval end
     )
     
-    -- Try to hook targeting system if available
     pcall(function()
         local targetMethod = sdk.find_type_definition("app.TargetSystem"):get_method("setTarget")
         if targetMethod then
@@ -86,7 +74,6 @@ function MonsterDetector.setupHooks()
         end
     end)
     
-    -- Try to hook HUD update for target changes
     pcall(function()
         local hudMethod = sdk.find_type_definition("snow.gui.FieldHudManager"):get_method("update")
         if hudMethod then
@@ -101,13 +88,10 @@ function MonsterDetector.setupHooks()
     end)
 end
 
--- Scene load end handler
 function MonsterDetector.onSceneLoadEnd()
-    -- Clear the monster list and primary target when scene changes
     MonsterDetector.activeMonsters = {}
     MonsterDetector.primaryTarget = nil
     
-    -- Try to detect quest rank and difficulty
     MonsterDetector.detectQuestInfo()
     
     if KillTimeTracker.utils then
@@ -115,20 +99,17 @@ function MonsterDetector.onSceneLoadEnd()
     end
 end
 
--- Handle target changes
 function MonsterDetector.onTargetChanged(args)
     if #args < 3 then return end
     
     local targetObject = sdk.to_managed_object(args[3])
     if not targetObject then return end
     
-    -- Check if this is a monster being targeted
     for ctx, monster in pairs(MonsterDetector.activeMonsters) do
         if ctx == targetObject or 
            (ctx.get_UniqueIndex and targetObject.get_UniqueIndex and 
             ctx:get_UniqueIndex() == targetObject:get_UniqueIndex()) then
             
-            -- This monster is being targeted, mark it as primary
             MonsterDetector.primaryTarget = monster
             
             if KillTimeTracker.utils then
@@ -140,14 +121,12 @@ function MonsterDetector.onTargetChanged(args)
     end
 end
 
--- Check HUD for monster targets
 function MonsterDetector.checkHudForTargets()
     local uiManager = sdk.get_managed_singleton("snow.gui.FieldHudManager") or 
                      sdk.get_managed_singleton("snow.QuestHudManager")
     
     if not uiManager then return end
     
-    -- Try to find the highlighted monster
     pcall(function()
         if uiManager.getHighlightedMonster then
             local highlightedMonster = uiManager:getHighlightedMonster()
@@ -175,7 +154,6 @@ function MonsterDetector.detectQuestInfo()
     local questManager = sdk.get_managed_singleton("snow.QuestManager")
     if not questManager then return end
     
-    -- Try to get the quest data
     local questData = nil
     pcall(function()
         if questManager.getActiveQuestData then
@@ -187,12 +165,10 @@ function MonsterDetector.detectQuestInfo()
     
     if not questData then return end
     
-    -- Extract quest rank and difficulty with expanded detection
     pcall(function()
         local questRank = 1
         local difficulty = 3
         
-        -- Try to get quest data from different sources
         local sources = {
             rank = {
                 "get_QuestRank", "QuestRank", "get_Rank", "_Rank", 
@@ -204,7 +180,6 @@ function MonsterDetector.detectQuestInfo()
             }
         }
         
-        -- Detect rank
         for _, source in ipairs(sources.rank) do
             local success, result = pcall(function()
                 if type(questData[source]) == "function" then
@@ -220,7 +195,6 @@ function MonsterDetector.detectQuestInfo()
             end
         end
         
-        -- Detect difficulty
         for _, source in ipairs(sources.difficulty) do
             local success, result = pcall(function()
                 if type(questData[source]) == "function" then
@@ -236,7 +210,6 @@ function MonsterDetector.detectQuestInfo()
             end
         end
         
-        -- Additional check for specific quest target info
         pcall(function()
             local targetEmIds = questData:getTargetEmId()
             if targetEmIds and targetEmIds:get_Length() > 0 then
@@ -257,7 +230,6 @@ function MonsterDetector.detectQuestInfo()
             end
         end)
         
-        -- Update detector and config
         MonsterDetector.questRank = questRank
         MonsterDetector.questDifficulty = difficulty
         
@@ -272,21 +244,16 @@ function MonsterDetector.detectQuestInfo()
     end)
 end
 
--- Initialize the enemy types list
 function MonsterDetector.initEnemyTypesList()
-    -- Get the enemy enum
     local enemyEnum = MonsterDetector.generateEnumValues("app.EnemyDef.ID")
     
-    -- Get the enemy manager
     local enemyManager = sdk.get_managed_singleton("app.EnemyManager")
     if not enemyManager then return end
     
-    -- Get valid Em IDs
     local ValidEmIDs = sdk.find_type_definition("app.EnemyManager"):get_field("_ValidEmIds")
     local validEms = ValidEmIDs:get_data(enemyManager)
     if not validEms then return end
     
-    -- Get all valid enemy IDs
     local int_array_getItem = sdk.find_type_definition("app.EnemyDef.ID[]"):get_method("get_Item")
     local size = validEms:get_size()
     
@@ -309,15 +276,12 @@ function MonsterDetector.initEnemyTypesList()
     end
 end
 
--- Get the name of an enemy by ID
 function MonsterDetector.getEnemyName(emId)
-    -- Try to find the name in our cached names
     local monsterDef = MonsterDetector.monsterDefinitions[emId]
     if monsterDef and monsterDef.name then
         return monsterDef.name
     end
     
-    -- Try to get the name from the game
     local name = "Unknown"
     pcall(function()
         local guid = MonsterDetector.GetEnemyNameFunc(nil, emId)
@@ -332,34 +296,27 @@ function MonsterDetector.getEnemyName(emId)
     return name
 end
 
--- Update a monster's information
 function MonsterDetector.updateMonster(enemy)
     if not enemy then return end
     
-    -- Get enemy context
     local ctx_holder = MonsterDetector.Enemy_ContextHolder:get_data(enemy)
     if not ctx_holder then return end
     
     local ctx = MonsterDetector.EnemyContextHolder_Context:get_data(ctx_holder)
     if not ctx then return end
     
-    -- Only handle boss enemies
     local isBoss = ctx:get_IsBoss()
     if not isBoss then return end
     
-    -- Check if we already have this monster
     if MonsterDetector.activeMonsters[ctx] then
-        -- Update last seen time and any changed status
         local monster = MonsterDetector.activeMonsters[ctx]
         monster.lastUpdate = os.time()
         
-        -- Update death state
         pcall(function()
             local browser = ctx:get_Browser()
             if browser then
                 monster.isDead = browser:get_IsHealthZero()
                 
-                -- Check if this was the primary target and it died
                 if monster == MonsterDetector.primaryTarget and monster.isDead then
                     MonsterDetector.primaryTarget = nil
                 end
@@ -369,20 +326,16 @@ function MonsterDetector.updateMonster(enemy)
         return
     end
     
-    -- Create a new monster entry
     local monster = MonsterDetector.createMonsterInfo(ctx)
     if monster and monster.emId then
         MonsterDetector.activeMonsters[ctx] = monster
         
-        -- Log the detected monster
         if KillTimeTracker.utils and KillTimeTracker.utils.logDebug then
             KillTimeTracker.utils.logDebug("Detected monster: " .. monster.name)
         end
         
-        -- Update the game info with detected monster
         MonsterDetector.updateGameInfoWithMonster(monster)
         
-        -- Check if this might be a primary target
         if monster.isTarget or monster.isTempered then
             MonsterDetector.primaryTarget = monster
             if KillTimeTracker.utils and KillTimeTracker.utils.logDebug then
@@ -396,17 +349,14 @@ function MonsterDetector.createMonsterInfo(ctx)
     local monster = {}
     monster.lastUpdate = os.time()
     
-    -- Try to get monster ID
     local id = ctx:get_EmID()
     if not id then return nil end
     
     monster.emId = id
     monster.uniqueId = ctx:get_UniqueIndex()
     
-    -- Get the monster name
     monster.name = MonsterDetector.getEnemyName(id)
     
-    -- More comprehensive target detection with extensive logging
     pcall(function()
         monster.isTarget = false
         local targetChecks = {
@@ -436,7 +386,6 @@ function MonsterDetector.createMonsterInfo(ctx)
         end
     end)
     
-    -- Check quest director's target
     pcall(function()
         local questDirector = Core.GetQuestDirector()
         if questDirector and questDirector._QuestData then
@@ -462,33 +411,17 @@ function MonsterDetector.createMonsterInfo(ctx)
     return monster
 end
 
--- Update game info with detected monster
 function MonsterDetector.updateGameInfoWithMonster(monster)
-    -- Update tempered flag
     if monster.isTempered then
         KillTimeTracker.config.ManualTemperedStatus = true
     end
 end
 
 function MonsterDetector.getPrimaryQuestTarget()
-    -- Add comprehensive logging for all active monsters
-    log.debug("[KillTimeTracker] --- Active Monsters Debug ---")
-    for ctx, monster in pairs(MonsterDetector.activeMonsters) do
-        log.debug(string.format(
-            "[KillTimeTracker] Monster: %s, EmID: %s, isTarget: %s, isDead: %s, UniqueIndex: %s", 
-            monster.name, 
-            ctx.get_EmID and ctx:get_EmID() or "N/A",
-            tostring(monster.isTarget),
-            tostring(monster.isDead),
-            ctx.get_UniqueIndex and tostring(ctx:get_UniqueIndex()) or "N/A"
-        ))
-    end
     
-    log.debug("[KillTimeTracker] --- Quest Director Debug ---")
     
     local questDirector = Core.GetQuestDirector()
     if questDirector and questDirector._QuestData then
-        log.debug("[KillTimeTracker] Quest Director exists")
         
         pcall(function()
             if questDirector._QuestData.getTargetEmId then
@@ -509,14 +442,12 @@ function MonsterDetector.getPrimaryQuestTarget()
     
     local questData = questDirector._QuestData
     
-    -- Try to get target EM IDs directly from quest data
     pcall(function()
         if questData.getTargetEmId then
             local targetEmIds = questData:getTargetEmId()
             if targetEmIds and targetEmIds:get_Length() > 0 then
                 local primaryEmId = targetEmIds:get_Item(0)
                 
-                -- Find matching monster in active monsters by EM ID
                 for ctx, monster in pairs(MonsterDetector.activeMonsters) do
                     if ctx.get_EmID and ctx:get_EmID() == primaryEmId then
                         if KillTimeTracker.utils and KillTimeTracker.utils.logDebug then
@@ -530,21 +461,18 @@ function MonsterDetector.getPrimaryQuestTarget()
         end
     end)
     
-    -- If direct EM ID matching fails, try name-based matching
     pcall(function()
         if questData.getTargetEmId then
             local targetEmIds = questData:getTargetEmId()
             if targetEmIds and targetEmIds:get_Length() > 0 then
                 local primaryEmId = targetEmIds:get_Item(0)
                 
-                -- Get the expected monster name from the EM ID
                 local enemyIdNameMap = Core.GetEnumMap("app.EnemyDef.ID")
                 local enemyCodeName = enemyIdNameMap[primaryEmId]
                 
                 if enemyCodeName then
                     local expectedMonsterName = KillTimeTracker.records.getMonsterName(enemyCodeName)
                     
-                    -- Find monster by name
                     for ctx, monster in pairs(MonsterDetector.activeMonsters) do
                         if monster.name == expectedMonsterName then
                             if KillTimeTracker.utils and KillTimeTracker.utils.logDebug then
@@ -559,9 +487,7 @@ function MonsterDetector.getPrimaryQuestTarget()
         end
     end)
     
-    -- Fallback to other detection methods
     for ctx, monster in pairs(MonsterDetector.activeMonsters) do
-        -- Check for monsters with explicit target flags
         if monster.isTarget or monster.isQuestTarget then
             if KillTimeTracker.utils and KillTimeTracker.utils.logDebug then
                 KillTimeTracker.utils.logDebug("Found primary target by target flag: " .. monster.name)
@@ -571,7 +497,6 @@ function MonsterDetector.getPrimaryQuestTarget()
         end
     end
     
-    -- If no specific target found, return first non-dead monster
     for ctx, monster in pairs(MonsterDetector.activeMonsters) do
         if not monster.isDead then
             if KillTimeTracker.utils and KillTimeTracker.utils.logDebug then
@@ -585,9 +510,7 @@ function MonsterDetector.getPrimaryQuestTarget()
     return nil
 end
 
--- Get current monster info for the hunt - without using getBossNameFromContext
 function MonsterDetector.getCurrentTargetMonsterInfo()
-    -- Try to get the primary target first
     local target = MonsterDetector.getPrimaryQuestTarget()
     
     if target then
@@ -602,7 +525,6 @@ function MonsterDetector.getCurrentTargetMonsterInfo()
         }
     end
     
-    -- Try to use any detected monsters
     local firstMonster = nil
     for _, monster in pairs(MonsterDetector.activeMonsters) do
         if not monster.isDead then
@@ -623,7 +545,6 @@ function MonsterDetector.getCurrentTargetMonsterInfo()
         }
     end
     
-    -- Fall back to manual settings
     return {
         name = "Unknown Monster",
         questRank = KillTimeTracker.config.ManualQuestRank,
@@ -632,7 +553,6 @@ function MonsterDetector.getCurrentTargetMonsterInfo()
     }
 end
 
--- Helper function to directly access quest info from quest director
 function MonsterDetector.getQuestDirectorMonsterInfo()
     local questDirector = Core.GetQuestDirector()
     if not questDirector then 
@@ -704,7 +624,6 @@ function MonsterDetector.getQuestDirectorMonsterInfo()
     return nil
 end
 
--- Helper function to generate enum values
 function MonsterDetector.generateEnumValues(typename)
     local t = sdk.find_type_definition(typename)
     if not t then return {} end

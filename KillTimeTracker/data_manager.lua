@@ -6,26 +6,23 @@
 local json, os = json, os
 
 local DataManager = {
-    bestTimes = {},         -- Storage for best kill times
-    recentHunts = {},       -- Storage for recent hunt records
+    bestTimes = {},
+    recentHunts = {},
     killTimeFilePath = "KillTimes.json",
     recentHuntsFilePath = "RecentHunts.json"
 }
 
 local KillTimeTracker = nil
 
--- Initialize with the main context
 function DataManager.init(context)
     KillTimeTracker = context
 end
 
--- Load all data
 function DataManager.loadData()
     DataManager.loadKillTimes()
     DataManager.loadRecentHunts()
 end
 
--- Load kill times from file
 function DataManager.loadKillTimes()
     local ok, data = pcall(json.load_file, DataManager.killTimeFilePath)
     if ok and data and type(data) == "table" then
@@ -36,12 +33,10 @@ function DataManager.loadKillTimes()
     end
 end
 
--- Save kill times to file
 function DataManager.saveKillTimes()
     pcall(json.dump_file, DataManager.killTimeFilePath, DataManager.bestTimes)
 end
 
--- Load recent hunts from file
 function DataManager.loadRecentHunts()
     local ok, data = pcall(json.load_file, DataManager.recentHuntsFilePath)
     if ok and data and type(data) == "table" then
@@ -51,26 +46,22 @@ function DataManager.loadRecentHunts()
     end
 end
 
--- Save recent hunts to file
 function DataManager.saveRecentHunts()
     pcall(json.dump_file, DataManager.recentHuntsFilePath, DataManager.recentHunts)
 end
 
--- Clear all hunt records
 function DataManager.resetHuntRecords()
     DataManager.bestTimes = {}
     DataManager.saveKillTimes()
     KillTimeTracker.utils.sendNotification("<COLOR FF0000>All hunt records have been reset!</COLOR>")
 end
 
--- Clear recent hunts
 function DataManager.resetRecentHunts()
     DataManager.recentHunts = {}
     DataManager.saveRecentHunts()
     KillTimeTracker.utils.sendNotification("<COLOR FF0000>All recent hunts have been reset!</COLOR>")
 end
 
--- Migrate data to include timestamps
 function DataManager.migrateDataToIncludeTimestamps()
     local hasUpdates = false
     
@@ -103,7 +94,6 @@ function DataManager.migrateDataToIncludeTimestamps()
     end
 end
 
--- Migrate recent hunts to include player count
 function DataManager.migrateRecentHuntsPlayerCount()
     local hasUpdates = false
     
@@ -122,7 +112,6 @@ function DataManager.migrateRecentHuntsPlayerCount()
     end
 end
 
--- Migrate records to include player count
 function DataManager.migrateRecordsToIncludePlayerCount()
     local hasUpdates = false
     
